@@ -1,0 +1,297 @@
+{% extends 'layout.html' %}
+{% block content %}
+<div class="container mt-4">
+    <h2>Dashboard Financeiro</h2>
+    <!-- Filtros e Ações -->
+    <div class="row mb-4">
+        <div class="col-md-12 d-flex gap-2">
+            <a href="{{ url_for('finance.add_transaction') }}" class="btn btn-primary">Adicionar Transação</a>
+            <a href="{{ url_for('finance.list_transactions') }}" class="btn btn-secondary">Listar Transações</a>
+            <a href="{{ url_for('finance.list_categories') }}" class="btn btn-info text-white">Categorias</a>
+            <a href="{{ url_for('finance.import_transactions') }}" class="btn btn-outline-primary">Importar .CSV</a>
+        </div>
+    </div>
+        <!-- Filtro por Mês -->
+    <div class="row mb-4">
+        <div class="col-md-4">
+            <form method="GET" action="{{ url_for('finance.dashboard') }}" class="d-flex gap-2">
+                <select name="month" class="form-select" onchange="this.form.submit()">
+                    <option value="">Todos os Meses</option>
+                    {% for m in meses %}
+                    <option value="{{ m }}" {% if month_filter == m %}selected{% endif %}>{{ m }}</option>
+                    {% endfor %}
+                </select>
+                {% if month_filter %}
+                    <a href="{{ url_for('finance.dashboard') }}" class="btn btn-outline-secondary">Limpar</a>
+                {% endif %}
+            </form>
+        </div>
+    </div>
+        <!-- Cards Resumo Financeiro -->
+    <div class="row mb-4">
+        <div class="col-md-4">
+            <div class="card text-white bg-success mb-3">
+                <div class="card-header">Saldo</div>
+                <div class="card-body">
+                    <h4 class="card-title">R$ {{ saldo|round(2) }}</h4>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card text-white bg-primary mb-3">
+                <div class="card-header">Receitas</div>
+                <div class="card-body">
+                    <h4 class="card-title">R$ {{ receitas|round(2) }}</h4>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card text-white bg-danger mb-3">
+                <div class="card-header">Despesas</div>
+                <div class="card-body">
+                    <h4 class="card-title">R$ {{ despesas|round(2) }}</h4>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- Gráficos -->
+    <div class="row mb-4">
+        <div class="col-md-4">
+            <div class="card h-100">
+                <div class="card-header">Receitas x Despesas</div>
+                <div class="card-body" style="position: relative; height: 300px;">
+                    <canvas id="pieChart"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-8">
+            <div class="card h-100">
+                <div class="card-header">Evolução Anual (Todos os Meses)</div>
+                <div class="card-body" style="position: relative; height: 300px;">
+                    <canvas id="lineChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="row mb-4">
+        <div class="col-md-5">
+            <div class="card h-100">
+                <div class="card-header">Previsto vs Realizado</div>
+                <div class="card-body" style="position: relative; height: 300px;">
+                    <canvas id="barChart"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-7">
+            <div class="card h-100">
+                <div class="card-header">Últimas Transações</div>
+                <div class="card-body table-responsive">
+                    <table class="table table-striped table-hover mb-0">
+                        <thead>
+                            <tr>
+                                <th>Descrição</th>
+                                <th>Valor Realizado</th>
+                                <th>Tipo</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for t in transactions[-5:] %}
+                            <tr>
+                                <td>{{ t.description }}</td>
+                                <td>R$ {{ t.amount|round(2) }}</td>
+                                <td>
+                                    <span class="badge {{ 'bg-success' if t.type == 'income' else 'bg-danger' }}">
+                                        {{ 'Receita' if t.type == 'income' else 'Despesa' }}
+                                    </span>
+                                </td>
+                                <td>{{ 'Pago' if t.paid else 'Pendente' }}</td>
+                            </tr>
+                            {% else %}
+                            <tr><td colspan="4" class="text-center">Nenhuma transação encontrada.</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="row mb-4">
+        <div class="col-md-4">
+            <div class="card h-100">
+                <div class="card-header text-center">Despesas por Categoria</div>
+                <div class="card-body" style="position: relative; height: 250px;">
+                    {% if not cat_labels %}
+                        <p class="text-center text-muted mt-5">Sem despesas registradas.</p>
+                    {% else %}
+                        <canvas id="categoryChart"></canvas>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card h-100">
+                <div class="card-header text-center">Status (Pago x Pendente)</div>
+                <div class="card-body" style="position: relative; height: 250px;">
+                    <canvas id="statusChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<script>
+    // Configuração global para formatar valores em Reais (R$) no Tooltip
+    const currencyFormatter = {
+        callbacks: {
+            label: function(context) {
+                let label = context.dataset.label || context.label || '';
+                if (label) { label += ': '; }
+                if (context.parsed.y !== undefined) {
+                    // Para gráficos de linha e barra
+                    label += new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(context.parsed.y);
+                } else if (context.parsed !== null) {
+                    // Para gráficos de pizza/doughnut
+                    label += new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(context.parsed);
+                }
+                return label;
+            }
+        }
+    };
+
+    // ==========================================
+    // 1. Balanço do Mês (Receitas x Despesas)
+    // ==========================================
+    const canvasBalanco = document.getElementById('pieChart');
+    if (canvasBalanco) {
+        new Chart(canvasBalanco.getContext('2d'), {
+            type: 'doughnut',
+            data: {
+                labels: ['Receitas', 'Despesas'],
+                datasets: [{
+                    data: [{{ receitas|default(0)|round(2) }}, {{ despesas|default(0)|round(2) }}],
+                    backgroundColor: ['#198754', '#dc3545'],
+                    borderWidth: 1
+                }]
+            },
+            options: { 
+                responsive: true, maintainAspectRatio: false,
+                plugins: { legend: { position: 'bottom' }, tooltip: currencyFormatter }
+            }
+        });
+    }
+
+    // ==========================================
+    // 2. Despesas por Categoria
+    // ==========================================
+    const canvasCategoria = document.getElementById('categoryChart');
+    {% if cat_labels %}
+    if (canvasCategoria) {
+        const colorPalette = ['#0d6efd', '#6610f2', '#6f42c1', '#d63384', '#fd7e14', '#ffc107', '#20c997', '#0dcaf0', '#adb5bd'];
+        new Chart(canvasCategoria.getContext('2d'), {
+            type: 'doughnut',
+            data: {
+                labels: {{ cat_labels|tojson }},
+                datasets: [{
+                    data: {{ cat_values|tojson }},
+                    backgroundColor: colorPalette,
+                    borderWidth: 1
+                }]
+            },
+            options: { 
+                responsive: true, maintainAspectRatio: false,
+                plugins: { legend: { position: 'right' }, tooltip: currencyFormatter }
+            }
+        });
+    }
+    {% endif %}
+
+    // ==========================================
+    // 3. Status (Pago x Pendente)
+    // ==========================================
+    const canvasStatus = document.getElementById('statusChart');
+    if (canvasStatus) {
+        new Chart(canvasStatus.getContext('2d'), {
+            type: 'doughnut',
+            data: {
+                labels: ['Pago/Recebido', 'Pendente'],
+                datasets: [{
+                    data: [{{ total_pago|default(0)|round(2) }}, {{ total_pendente|default(0)|round(2) }}],
+                    backgroundColor: ['#0dcaf0', '#fd7e14'],
+                    borderWidth: 1
+                }]
+            },
+            options: { 
+                responsive: true, maintainAspectRatio: false,
+                plugins: { legend: { position: 'bottom' }, tooltip: currencyFormatter }
+            }
+        });
+    }
+
+    // ==========================================
+    // 4. Evolução Anual (Linhas)
+    // ==========================================
+    const canvasLinha = document.getElementById('lineChart');
+    if (canvasLinha) {
+        new Chart(canvasLinha.getContext('2d'), {
+            type: 'line',
+            data: {
+                labels: {{ meses|tojson }},
+                datasets: [
+                    {
+                        label: 'Receitas',
+                        data: {{ linha_receitas|tojson }},
+                        borderColor: '#198754',
+                        backgroundColor: 'rgba(25, 135, 84, 0.1)',
+                        fill: true,
+                        tension: 0.3
+                    },
+                    {
+                        label: 'Despesas',
+                        data: {{ linha_despesas|tojson }},
+                        borderColor: '#dc3545',
+                        backgroundColor: 'rgba(220, 53, 69, 0.1)',
+                        fill: true,
+                        tension: 0.3
+                    }
+                ]
+            },
+            options: { 
+                responsive: true, maintainAspectRatio: false,
+                plugins: { tooltip: currencyFormatter }
+            }
+        });
+    }
+
+    // ==========================================
+    // 5. Previsto vs Realizado (Barras)
+    // ==========================================
+    const canvasBarra = document.getElementById('barChart');
+    if (canvasBarra) {
+        new Chart(canvasBarra.getContext('2d'), {
+            type: 'bar',
+            data: {
+                labels: ['Receitas', 'Despesas'],
+                datasets: [
+                    {
+                        label: 'Previsto',
+                        data: [{{ receitas_previstas|default(0)|round(2) }}, {{ despesas_previstas|default(0)|round(2) }}],
+                        backgroundColor: '#6c757d'
+                    },
+                    {
+                        label: 'Realizado',
+                        data: [{{ receitas|default(0)|round(2) }}, {{ despesas|default(0)|round(2) }}],
+                        backgroundColor: ['#198754', '#dc3545'] // Usa as cores pra bater com as barras
+                    }
+                ]
+            },
+            options: { 
+                responsive: true, maintainAspectRatio: false,
+                plugins: { tooltip: currencyFormatter }
+            }
+        });
+    }
+</script>
+{% endblock %}

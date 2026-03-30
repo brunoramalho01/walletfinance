@@ -1,0 +1,221 @@
+{% extends 'layout.html' %}
+{% block content %}
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+
+        <h2>Transações</h2>
+        <div>
+            <a href="{{ url_for('finance.add_transaction') }}" class="btn btn-success">
+                <i class="fa-solid fa-plus me-1"></i> Nova Transação
+            </a>
+            <a href="{{ url_for('finance.export_transactions') }}" class="btn btn-outline-success ms-2">
+                <i class="fa-solid fa-file-excel me-1"></i> Exportar Dados
+            </a>
+            <a href="{{ url_for('finance.dashboard') }}" class="btn btn-outline-secondary ms-2">Voltar</a>
+        </div>
+    </div>
+    <!--<div class="card shadow-sm mb-4 border-0">
+        <div class="card-body bg-light">
+            <div class="row">
+                <div class="col-md-4">
+                    <label class="form-label small text-muted">Busca Rápida</label>
+                    <input type="text" id="searchInput" class="form-control" placeholder="Buscar por descrição, categoria...">
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label small text-muted">Busca no Banco de Dados</label>
+                    <form method="GET" action="{{ url_for('finance.list_transactions') }}" class="input-group">
+                        <input type="text" name="search" class="form-control" placeholder="Descrição ou categoria..."
+                            value="{{ search_query }}">
+                        <button class="btn btn-outline-secondary" type="submit">
+                            <i class="fa-solid fa-magnifying-glass"></i>
+                        </button>
+                        {% if search_query %}
+                        <a href="{{ url_for('finance.list_transactions') }}" class="btn btn-outline-danger">Limpar</a>
+                        {% endif %}
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>-->
+    <div class="card shadow-sm mb-4 border-0">
+        <div class="card-header bg-light border-bottom-0 pt-3 pb-0">
+            <h6 class="text-muted mb-0"><i class="fa-solid fa-filter me-2"></i>Filtros de Análise</h6>
+        </div>
+        <div class="card-body bg-light">
+            <form method="GET" action="{{ url_for('finance.list_transactions') }}">
+                <div class="row g-3">
+                    <div class="col-md-3">
+                        <label class="form-label small text-muted fw-bold">Descrição ou Categoria</label>
+                        <input type="text" name="search" class="form-control form-control-sm"
+                            placeholder="Ex: Mercado, Luz..." value="{{ search_query }}">
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label small text-muted fw-bold">Mês</label>
+                        <select name="month" class="form-select form-select-sm">
+                            <option value="">Todos</option>
+                            {% for m in ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto',
+                            'Setembro', 'Outubro', 'Novembro', 'Dezembro'] %}
+                            <option value="{{ m }}" {% if month_filter==m %}selected{% endif %}>{{ m }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label small text-muted fw-bold">Tipo</label>
+                        <select name="type" class="form-select form-select-sm">
+                            <option value="">Todos</option>
+                            <option value="income" {% if type_filter=='income' %}selected{% endif %}>Receita</option>
+                            <option value="expense" {% if type_filter=='expense' %}selected{% endif %}>Despesa</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label small text-muted fw-bold">Status</label>
+                        <select name="status" class="form-select form-select-sm">
+                            <option value="">Todos</option>
+                            <option value="1" {% if status_filter=='1' %}selected{% endif %}>Pago / Recebido</option>
+                            <option value="0" {% if status_filter=='0' %}selected{% endif %}>Pendente</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2 d-flex align-items-end">
+                        <button type="submit" class="btn btn-primary btn-sm w-100 me-2">
+                            <i class="fa-solid fa-magnifying-glass"></i> Filtrar
+                        </button>
+                        {% if search_query or month_filter or type_filter or status_filter %}
+                        <a href="{{ url_for('finance.list_transactions') }}" class="btn btn-outline-danger btn-sm"
+                            title="Limpar Filtros">
+                            <i class="fa-solid fa-xmark"></i>
+                        </a>
+                        {% endif %}
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+    <div class="card shadow-sm border-0">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0" id="transactionsTable">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Descrição</th>
+                            <th>Categoria</th>
+                            <th>Mês</th>
+                            <th class="text-end">Previsto</th>
+                            <th class="text-end">Realizado</th>
+                            <th class="text-center">Tipo</th>
+                            <th class="text-center">Status</th>
+                            <th>Vencimento</th>
+                            <th class="text-end">Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for t in transactions %}
+                        <tr>
+                            <td class="fw-bold text-secondary">{{ t.description }}</td>
+                            <td>{{ t.category }}</td>
+                            <td>{{ t.month }}</td>
+                            <td class="text-end text-muted">R$ {{ t.expected_amount|default(0)|round(2) }}</td>
+                            <td class="text-end fw-bold">R$ {{ t.amount|round(2) }}</td>
+
+                            <td class="text-center">
+                                {% if t.type == 'income' %}
+                                <span
+                                    class="badge bg-success bg-opacity-10 text-success border border-success">Receita</span>
+                                {% else %}
+                                <span
+                                    class="badge bg-danger bg-opacity-10 text-danger border border-danger">Despesa</span>
+                                {% endif %}
+                            </td>
+
+                            <td class="text-center">
+                                {% if t.paid %}
+                                <span class="badge bg-primary">Pago</span>
+                                {% else %}
+                                <span class="badge bg-warning text-dark">Pendente</span>
+                                {% endif %}
+                            </td>
+
+                            <td>{% if t.due_date %}{{ t.due_date.strftime('%d/%m/%Y') }}{% else %}-{% endif %}</td>
+
+                            <td class="text-end">
+                                <a href="{{ url_for('finance.edit_transaction', transaction_id=t.id) }}"
+                                    class="btn btn-sm btn-outline-primary">Editar</a>
+
+                                <form action="{{ url_for('finance.delete_transaction', transaction_id=t.id) }}"
+                                    method="post" style="display:inline;">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+                                    <button type="submit" class="btn btn-sm btn-outline-danger"
+                                        onclick="return confirm('Tem certeza que deseja excluir esta transação?');">Excluir</button>
+                                </form>
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="9" class="text-center py-4 text-muted">
+                                Nenhuma transação encontrada. Comece importando ou adicionando uma nova!
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    <!-- Paginação -->
+    {% if pagination.pages > 1 %}
+    <nav aria-label="Navegação de páginas das transações" class="mt-4">
+        <ul class="pagination justify-content-center">
+
+            <li class="page-item {% if not pagination.has_prev %}disabled{% endif %}">
+                <a class="page-link"
+                    href="{{ url_for('finance.list_transactions', page=pagination.prev_num, search=search_query, month=month_filter, type=type_filter, status=status_filter) }}">Anterior</a>
+            </li>
+
+            {% for page_num in pagination.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=2) %}
+            {% if page_num %}
+            <li class="page-item {% if page_num == pagination.page %}active{% endif %}">
+                <a class="page-link"
+                    href="{{ url_for('finance.list_transactions', page=page_num, search=search_query, month=month_filter, type=type_filter, status=status_filter) }}">{{
+                    page_num }}</a>
+            </li>
+            {% else %}
+            <li class="page-item disabled"><span class="page-link">...</span></li>
+            {% endif %}
+            {% endfor %}
+
+            <li class="page-item {% if not pagination.has_next %}disabled{% endif %}">
+                <a class="page-link"
+                    href="{{ url_for('finance.list_transactions', page=pagination.next_num, search=search_query, month=month_filter, type=type_filter, status=status_filter) }}">Próxima</a>
+            </li>
+
+        </ul>
+    </nav>
+    <div class="text-center text-muted small mt-2">
+        Mostrando de {{ pagination.first_item|default(0) }} até {{ pagination.last_item|default(0) }} de {{
+        pagination.total }} transações encontradas.
+    </div>
+    {% endif %}
+</div>
+<!-- script -->
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        const searchInput = document.getElementById("searchInput");
+        const tableRows = document.querySelectorAll("#transactionsTable tbody tr");
+
+        searchInput.addEventListener("keyup", function (e) {
+            const term = e.target.value.toLowerCase();
+
+            tableRows.forEach(function (row) {
+                // Pula a linha de "Nenhuma transação encontrada" se existir
+                if (row.cells.length === 1) return;
+
+                const textContent = row.textContent.toLowerCase();
+                if (textContent.includes(term)) {
+                    row.style.display = ""; // Mostra a linha
+                } else {
+                    row.style.display = "none"; // Esconde a linha
+                }
+            });
+        });
+    });
+</script>
+{% endblock %}

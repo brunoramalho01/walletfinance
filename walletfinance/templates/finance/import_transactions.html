@@ -1,0 +1,46 @@
+{% extends 'layout.html' %}
+{% block content %}
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                    <h4 class="mb-0">Importar Transações em Massa</h4>
+                </div>
+                <div class="card-body">
+                    <p>Você pode importar dezenas de transações de uma só vez utilizando uma planilha. Para garantir que o sistema leia tudo corretamente, baixe o nosso modelo padrão e preencha seus dados nele.</p>
+                    
+                    <div class="alert alert-info d-flex align-items-center">
+                        <i class="fa-solid fa-file-csv fa-2x me-3"></i>
+                        <div>
+                            <strong>1º Passo: Baixe a planilha modelo</strong><br>
+                            <a href="{{ url_for('finance.download_import_template') }}" class="btn btn-sm btn-outline-info mt-2">
+                                Baixar Template .CSV
+                            </a>
+                        </div>
+                    </div>
+
+                    <form method="POST" enctype="multipart/form-data" class="mt-4 border-top pt-4">
+                        {{ form.hidden_tag() }}
+                        
+                        <div class="mb-3">
+                            <strong>2º Passo: Faça o upload do arquivo preenchido</strong><br>
+                            {{ form.file.label(class_="form-label mt-2") }}
+                            {{ form.file(class_="form-control", accept=".csv") }}
+                            {% for error in form.file.errors %}
+                                <div class="text-danger small mt-1">{{ error }}</div>
+                            {% endfor %}
+                            <div class="form-text">As categorias que não existirem no sistema serão criadas automaticamente.</div>
+                        </div>
+
+                        <div class="d-flex justify-content-end gap-2 mt-4">
+                            <a href="{{ url_for('finance.list_transactions') }}" class="btn btn-secondary">Cancelar</a>
+                            <button type="submit" class="btn btn-success">Importar Dados</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

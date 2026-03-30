@@ -1,0 +1,6 @@
+[run]
+source = walletfinance
+omit = 
+    tests/*
+    autoapp.py
+

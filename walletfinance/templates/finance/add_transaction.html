@@ -1,0 +1,135 @@
+{% extends 'layout.html' %}
+{% block content %}
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card shadow border-0">
+                <div class="card-header bg-success text-white d-flex align-items-center">
+                    <i class="fa-solid fa-plus-circle me-2"></i>
+                    <h5 class="mb-0">Nova Transação</h5>
+                </div>
+                <div class="card-body p-4">
+                    <form method="post" id="transactionForm">
+                        {{ form.hidden_tag() }}
+                        
+                        <div class="mb-3">
+                            {{ form.description.label(class_="form-label fw-bold text-secondary") }}
+                            {{ form.description(class_="form-control bg-light border-0", placeholder="Ex: Conta de Luz, Salário...") }}
+                            {% for error in form.description.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
+                        </div>
+
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                {{ form.type.label(class_="form-label fw-bold text-secondary") }}
+                                {{ form.type(class_="form-select bg-light border-0", id="typeSelect") }}
+                            </div>
+                            <div class="col-md-6">
+                                {{ form.category.label(class_="form-label fw-bold text-secondary") }}
+                                {{ form.category(class_="form-select bg-light border-0", id="categorySelect") }}
+                            </div>
+                        </div>
+
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                {{ form.expected_amount.label(class_="form-label fw-bold text-secondary") }}
+                                <div class="input-group">
+                                    <span class="input-group-text bg-light border-0">R$</span>
+                                    {{ form.expected_amount(class_="form-control bg-light border-0") }}
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                {{ form.amount.label(class_="form-label fw-bold text-secondary") }}
+                                <div class="input-group">
+                                    <span class="input-group-text bg-light border-0 text-success fw-bold">R$</span>
+                                    {{ form.amount(class_="form-control bg-light border-0 fw-bold") }}
+                                </div>
+                                {% for error in form.amount.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
+                            </div>
+                        </div>
+
+                        <div class="row mb-4">
+                            <div class="col-md-4">
+                                {{ form.month.label(class_="form-label fw-bold text-secondary") }}
+                                {{ form.month(class_="form-select bg-light border-0") }}
+                            </div>
+                            <div class="col-md-4">
+                                {{ form.due_date.label(class_="form-label fw-bold text-secondary") }}
+                                {{ form.due_date(class_="form-control bg-light border-0", type="date") }}
+                            </div>
+                            <div class="col-md-4 d-flex align-items-end pb-2">
+                                <div class="form-check form-switch fs-5">
+                                    {{ form.paid(class_="form-check-input", role="switch", id="paidSwitch") }}
+                                    <label class="form-check-label fs-6 text-secondary mt-1" for="paidSwitch">Pago / Recebido</label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="d-flex justify-content-end gap-2 pt-3 border-top">
+                            <a href="{{ url_for('finance.list_transactions') }}" class="btn btn-light px-4">Cancelar</a>
+                            <button type="submit" class="btn btn-success px-5">Salvar Transação</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+    const typeSelect = document.getElementById("typeSelect");
+    const categorySelect = document.getElementById("categorySelect");
+    
+    // O Jinja2 do Flask injeta o dicionário do Python direto no JavaScript!
+    const categoryMapping = {{ category_mapping | tojson | safe }};
+    
+    // Fazemos um backup de todas as opções originais (ID e Texto)
+    const allOptions = Array.from(categorySelect.options).map(opt => ({
+        value: opt.value,
+        text: opt.text
+    }));
+
+    function filterCategories() {
+        const selectedType = typeSelect.value;
+        const currentSelectedValue = categorySelect.value;
+        
+        // 1. Limpa o Select de Categorias
+        categorySelect.innerHTML = '';
+        
+        // 2. Devolve a opção padrão ("Selecione uma categoria")
+        const defaultOption = allOptions.find(opt => opt.value === '');
+        if (defaultOption) {
+            categorySelect.add(new Option(defaultOption.text, defaultOption.value));
+        }
+        
+        // 3. Filtra e reconstrói as opções com base no Tipo selecionado
+        let valueStillExists = false;
+        
+        allOptions.forEach(opt => {
+            if (opt.value !== '' && categoryMapping[opt.value] === selectedType) {
+                categorySelect.add(new Option(opt.text, opt.value));
+                
+                // Verifica se a opção que o usuário já tinha selecionado ainda está válida
+                if (opt.value === currentSelectedValue) {
+                    valueStillExists = true;
+                }
+            }
+        });
+        
+        // 4. Se a opção anterior sumiu no filtro, volta para "Selecione..."
+        if (valueStillExists) {
+            categorySelect.value = currentSelectedValue;
+        } else {
+            categorySelect.value = '';
+        }
+    }
+
+    // Executa o filtro logo que a página carrega (Muito importante para o Editar!)
+    filterCategories();
+
+    // Fica "escutando" as mudanças: toda vez que o usuário trocar Receita/Despesa, o filtro roda
+    typeSelect.addEventListener("change", filterCategories);
+});
+</script>
+
+{% endblock %}

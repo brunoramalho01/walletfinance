@@ -1,0 +1,94 @@
+{% extends 'layout.html' %}
+{% block content %}
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>Categorias</h2>
+        <div>
+            <a href="{{ url_for('finance.add_category') }}" class="btn btn-success">
+                <i class="fa-solid fa-plus me-1"></i> Nova Categoria
+            </a>
+            <a href="{{ url_for('finance.dashboard') }}" class="btn btn-outline-secondary ms-2">Voltar</a>
+        </div>
+    </div>
+
+    <div class="card shadow-sm mb-4 border-0">
+        <div class="card-body bg-light">
+            <div class="row">
+                <div class="col-md-4">
+                    <label class="form-label small text-muted">Busca Rápida</label>
+                    <input type="text" id="searchCategoryInput" class="form-control" placeholder="Buscar por nome da categoria...">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card shadow-sm border-0">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0" id="categoriesTable">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Nome da Categoria</th>
+                            <th class="text-center">Tipo</th>
+                            <th class="text-end">Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for c in categories %}
+                        <tr>
+                            <td class="fw-bold text-secondary">{{ c.name }}</td>
+                            
+                            <td class="text-center">
+                                {% if c.type == 'income' %}
+                                    <span class="badge bg-success bg-opacity-10 text-success border border-success">Receita</span>
+                                {% else %}
+                                    <span class="badge bg-danger bg-opacity-10 text-danger border border-danger">Despesa</span>
+                                {% endif %}
+                            </td>
+                            
+                            <td class="text-end">
+                                <a href="{{ url_for('finance.edit_category', category_id=c.id) }}" class="btn btn-sm btn-outline-primary">Editar</a>
+                                
+                                <form action="{{ url_for('finance.delete_category', category_id=c.id) }}" method="post" style="display:inline;">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                                    <button type="submit" class="btn btn-sm btn-outline-danger" onclick="return confirm('Tem certeza que deseja excluir esta categoria? Atenção: Transações vinculadas a ela podem ser afetadas.');">Excluir</button>
+                                </form>
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="3" class="text-center py-4 text-muted">
+                                Nenhuma categoria encontrada. Clique em "Nova Categoria" para começar!
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        const searchInput = document.getElementById("searchCategoryInput");
+        const tableRows = document.querySelectorAll("#categoriesTable tbody tr");
+
+        searchInput.addEventListener("keyup", function(e) {
+            const term = e.target.value.toLowerCase();
+            
+            tableRows.forEach(function(row) {
+                // Pula a linha de "Nenhuma categoria encontrada" se ela existir
+                if (row.cells.length === 1) return;
+
+                const textContent = row.textContent.toLowerCase();
+                if (textContent.includes(term)) {
+                    row.style.display = ""; // Mostra a linha
+                } else {
+                    row.style.display = "none"; // Esconde a linha
+                }
+            });
+        });
+    });
+</script>
+{% endblock %}
