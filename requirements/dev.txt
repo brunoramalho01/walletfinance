@@ -53,7 +53,7 @@ pydocstyle==6.3.0
 pyflakes==3.4.0
 Pygments==2.19.2
 pytest==8.4.1
-pytest-cov==6.2.1
+pytest-cov==7.1.0
 python-dotenv==1.2.2
 setuptools==82.0.1
 snowballstemmer==3.0.1
