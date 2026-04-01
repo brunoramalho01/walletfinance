@@ -11,6 +11,14 @@ Um aplicativo web moderno e completo para controle financeiro pessoal. Construí
 
 ---
 
+## 🎯 O Propósito do Projeto
+
+**O Problema:** O Brasil enfrenta um cenário financeiro desafiador. Dados recentes do Banco Central apontam que mais de **80% das famílias brasileiras possuem dívidas**, comprometendo cerca de 50% de sua renda anual — um recorde histórico. Aliado a isso, há uma profunda carência de educação financeira básica, especialmente entre a população de baixa e média renda. Ferramentas tradicionais, como planilhas complexas, muitas vezes geram atrito e afastam as pessoas do controle de seus próprios gastos.
+
+**A Solução:** O WalletFinance nasceu com um objetivo claro: **descomplicar a gestão financeira**. Construído com Python e Flask, o projeto foca em uma interface limpa, didática e de fácil uso. A aplicação permite que qualquer pessoa, independentemente do seu nível de letramento tecnológico, consiga visualizar sua saúde financeira com facilidade. Através de dashboards interativos e organização inteligente, o sistema transforma números brutos em clareza visual, provando que a tecnologia deve ser uma ponte, e não uma barreira, para a educação financeira.
+
+---
+
 ## 📸 Imagens do Projeto
 
 
